@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 const Cars = () => {
   const [cars, setCars] = useState([]);
@@ -20,15 +21,11 @@ const Cars = () => {
   useEffect(() => {
     const fetchCars = async () => {
       try {
-        const response = await fetch("http://localhost:9092/api/cars");
-        if (!response.ok) {
-          throw new Error("Failed to fetch cars");
-        }
-        const data = await response.json();
-        setCars(data);
-        setLoading(false);
+        const response = await axios.get("http://localhost:9092/api/cars");
+        setCars(response.data);
       } catch (err) {
-        setError(err.message);
+        setError("Failed to fetch cars. Try again later.");
+      } finally {
         setLoading(false);
       }
     };
@@ -49,17 +46,14 @@ const Cars = () => {
       : "http://localhost:9092/api/cars";
 
     try {
-      const response = await fetch(url, {
+      const response = await axios({
         method,
+        url,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        data: formData,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save car");
-      }
-
-      const updatedCar = await response.json();
+      const updatedCar = response.data;
 
       setCars((prevCars) =>
         isEditing
@@ -78,23 +72,16 @@ const Cars = () => {
 
       setIsEditing(false);
     } catch (err) {
-      setError(err.message);
+      setError("Failed to save car. Try again.");
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:9092/api/cars/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete car");
-      }
-
+      await axios.delete(`http://localhost:9092/api/cars/${id}`);
       setCars((prevCars) => prevCars.filter((car) => car.id !== id));
     } catch (err) {
-      setError(err.message);
+      setError("Failed to delete car.");
     }
   };
 

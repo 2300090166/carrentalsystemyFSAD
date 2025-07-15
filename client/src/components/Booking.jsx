@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import axios from "axios"; // Import axios
-import { carData } from "../data/carData"; // Import car data
+import axios from "axios";
 
 const Booking = () => {
   const [searchParams] = useSearchParams();
@@ -12,75 +11,75 @@ const Booking = () => {
     returnDate: "",
     name: "",
     email: "",
-    phone: ""
+    phone: "",
   });
+  const [carData, setCarData] = useState([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      const bookingData = {
-        carId: selectedCar,
-        pickupDate: formData.pickupDate,
-        returnDate: formData.returnDate,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone
-      };
-
+  // Fetch car list from backend
+  useEffect(() => {
+    const fetchCars = async () => {
       try {
-        const response = await axios.post(
-          "http://localhost:9091/api/bookings", // Replace with your backend URL
-          bookingData,
-          {
-            auth: {
-              username: "user", // Replace with your backend username
-              password: "17765439-77bf-4bf1-a78d-1d00ecd04ccf" // Replace with your backend password
-            }
-          }
-        );
-        console.log("Booking Successful:", response.data);
-        setIsSubmitted(true);
-      } catch (error) {
-        console.error("Error submitting booking:", error.response);
-        setError("Booking failed. Please try again.");
+        const response = await axios.get("http://localhost:9092/api/cars");
+        setCarData(response.data); // Update car list
+      } catch (err) {
+        setError("Failed to fetch cars. Please try again.");
       }
-    } else {
-      setError("Please fill all the fields correctly.");
-    }
-  };
+    };
+    fetchCars();
+  }, []);
 
-  // Validate form fields
+  // Validate form fields before submitting
   const validateForm = () => {
     const { pickupDate, returnDate, name, email, phone } = formData;
-    if (
-      !pickupDate ||
-      !returnDate ||
-      !name ||
-      !email ||
-      !phone ||
-      new Date(pickupDate) > new Date(returnDate)
-    ) {
-      return false;
-    }
-    return true;
+    return (
+      pickupDate &&
+      returnDate &&
+      name &&
+      email &&
+      phone &&
+      new Date(pickupDate) <= new Date(returnDate)
+    );
   };
 
   // Handle form field changes
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      setError("Please fill all fields correctly.");
+      return;
+    }
+
+    try {
+      await axios.post("http://localhost:9091/api/bookings", {
+        carId: selectedCar,
+        pickupDate: formData.pickupDate,
+        returnDate: formData.returnDate,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+      });
+
+      setIsSubmitted(true);
+    } catch (err) {
+      setError("Booking failed. Please try again.");
+    }
   };
 
   if (isSubmitted) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Booking Confirmed!</h2>
-        <p className="mb-4">Thank you for your booking. We’ll contact you shortly.</p>
+        <p className="mb-4">Thank you! We'll contact you soon.</p>
         <Link to="/" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
           Return Home
         </Link>
@@ -91,9 +90,8 @@ const Booking = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Book a Car</h1>
-
-      {error && <p className="text-red-600 mb-4">{error}</p>} {/* Display error */}
-
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+      
       <form onSubmit={handleSubmit} className="max-w-md mx-auto">
         <div className="mb-4">
           <label className="block mb-2">Select Car</label>
@@ -172,10 +170,7 @@ const Booking = () => {
           />
         </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-        >
+        <button type="submit" className="w-full bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
           Complete Booking
         </button>
       </form>
